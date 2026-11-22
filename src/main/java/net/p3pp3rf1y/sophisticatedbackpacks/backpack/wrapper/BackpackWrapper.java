@@ -126,15 +126,17 @@ public class BackpackWrapper implements IBackpackWrapper {
 
 	@Override
 	public InventoryHandler getInventoryHandler() {
-		if (handler == null) {
-			handler = new BackpackInventoryHandler(getNumberOfInventorySlots() - (getNumberOfSlotRows() * getColumnsTaken()),
+		InventoryHandler inventoryHandler = handler;
+		if (inventoryHandler == null) {
+			inventoryHandler = new BackpackInventoryHandler(getNumberOfInventorySlots() - (getNumberOfSlotRows() * getColumnsTaken()),
 					this, getBackpackContentsNbt(), () -> {
 				markBackpackContentsDirty();
 				inventorySlotChangeHandler.run();
 			}, StackUpgradeItem.getInventorySlotLimit(this));
-			handler.addListener(getSettingsHandler().getTypeCategory(ItemDisplaySettingsCategory.class)::itemChanged);
+			handler = inventoryHandler;
+			inventoryHandler.addListener(getSettingsHandler().getTypeCategory(ItemDisplaySettingsCategory.class)::itemChanged);
 		}
-		return handler;
+		return inventoryHandler;
 	}
 
 	private int getNumberOfInventorySlots() {
@@ -232,15 +234,18 @@ public class BackpackWrapper implements IBackpackWrapper {
 
 	@Override
 	public UpgradeHandler getUpgradeHandler() {
-		if (upgradeHandler == null) {
+		UpgradeHandler currentUpgradeHandler = upgradeHandler;
+		if (currentUpgradeHandler == null) {
 			if (getContentsUuid().isPresent()) {
-				upgradeHandler = new UpgradeHandler(getNumberOfUpgradeSlots(), this, getBackpackContentsNbt(), this::markBackpackContentsDirty, () -> {
-					if (handler != null) {
-						handler.clearListeners();
-						handler.setBaseSlotLimit(StackUpgradeItem.getInventorySlotLimit(this));
+				currentUpgradeHandler = new UpgradeHandler(getNumberOfUpgradeSlots(), this, getBackpackContentsNbt(), this::markBackpackContentsDirty, () -> {
+					InventoryHandler inventoryHandler = handler;
+					if (inventoryHandler != null) {
+						inventoryHandler.clearListeners();
+						inventoryHandler.setBaseSlotLimit(StackUpgradeItem.getInventorySlotLimit(this));
 					}
-					getInventoryHandler().clearListeners();
-					handler.addListener(getSettingsHandler().getTypeCategory(ItemDisplaySettingsCategory.class)::itemChanged);
+					inventoryHandler = getInventoryHandler();
+					inventoryHandler.clearListeners();
+					inventoryHandler.addListener(getSettingsHandler().getTypeCategory(ItemDisplaySettingsCategory.class)::itemChanged);
 					inventoryIOHandler = null;
 					inventoryModificationHandler = null;
 					fluidHandlerInitialized = false;
@@ -256,10 +261,11 @@ public class BackpackWrapper implements IBackpackWrapper {
 					}
 				};
 			} else {
-				upgradeHandler = Noop.INSTANCE.getUpgradeHandler();
+				currentUpgradeHandler = Noop.INSTANCE.getUpgradeHandler();
 			}
+			upgradeHandler = currentUpgradeHandler;
 		}
-		return upgradeHandler;
+		return currentUpgradeHandler;
 	}
 
 	@Override

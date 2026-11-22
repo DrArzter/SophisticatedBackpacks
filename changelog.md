@@ -12,6 +12,7 @@ Modified version of Sophisticated Backpacks (Fabric port), GPL-3.0. Notice of mo
 - Check that the player is alive and within 8 blocks before the server opens the backpack of another player. Adapted from Forge commit 588c2c67. The same alive check is added to the menu check, adapted from Forge commit 2dc0f0e2.
 - Fix the refill upgrade deleting the item in the off hand when a mod such as Better Combat changes how the off hand is read. The upgrade now reads the off hand slot of the inventory. Backport of Forge commit c6bd200a.
 - Fix the advanced jukebox upgrade losing the disc when it is crafted from the jukebox upgrade. The recipe now uses the next tier recipe type, like the other upgrades. Backport of Forge commit 2f0cf03a. The Core part of that commit is not ported.
+- Fix crashes in the upgrade cache. The inventory handler and the upgrade handler are now set through local variables, and the Inception upgrade cache uses concurrent maps. Backport of Forge commits 8928d8b8 and aaa2bf75.
 
 ## 1.20.1-3.23.4.5+sp.3 (2026-11-22) - sp fork
 
