@@ -10,6 +10,7 @@ Modified version of Sophisticated Backpacks (Fabric port), GPL-3.0. Notice of mo
 - Check on the server that a block is loaded and within 8 blocks of the player before a backpack upgrade acts on it. Before, the server used the block position from the client without a check. This is a new fix, not from upstream.
 - Fix the server sending or creating backpack contents for any contents id that a client asked for. The server now answers only for a backpack that the player carries, holds on the cursor or sees in the open menu. It no longer creates an empty entry for an unknown id. Adapted from Forge commit 588c2c67, written again for this code base without the item reference class.
 - Check that the player is alive and within 8 blocks before the server opens the backpack of another player. Adapted from Forge commit 588c2c67. The same alive check is added to the menu check, adapted from Forge commit 2dc0f0e2.
+- Fix the refill upgrade deleting the item in the off hand when a mod such as Better Combat changes how the off hand is read. The upgrade now reads the off hand slot of the inventory. Backport of Forge commit c6bd200a.
 
 ## 1.20.1-3.23.4.5+sp.3 (2026-11-22) - sp fork
 
