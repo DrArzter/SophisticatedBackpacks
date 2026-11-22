@@ -5,11 +5,14 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.Vec3;
 import net.p3pp3rf1y.sophisticatedbackpacks.util.InventoryInteractionHelper;
 import net.p3pp3rf1y.sophisticatedbackpacks.util.PlayerInventoryProvider;
 import net.p3pp3rf1y.sophisticatedcore.network.SimplePacketBase;
 
 public class InventoryInteractionMessage extends SimplePacketBase {
+	// Same limit as vanilla uses for block interaction packets (8 blocks, squared).
+	private static final double MAX_INTERACTION_DISTANCE_SQR = 64.0D;
 	private final BlockPos pos;
 	private final Direction face;
 
@@ -31,6 +34,11 @@ public class InventoryInteractionMessage extends SimplePacketBase {
 		context.enqueueWork(() -> {
 			ServerPlayer sender = context.getSender();
 			if (sender == null) {
+				return;
+			}
+
+			// The position comes from the client. Do not read or load blocks that the player cannot reach.
+			if (!sender.level().isLoaded(pos) || sender.distanceToSqr(Vec3.atCenterOf(pos)) > MAX_INTERACTION_DISTANCE_SQR) {
 				return;
 			}
 
