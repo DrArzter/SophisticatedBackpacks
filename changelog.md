@@ -13,6 +13,7 @@ Modified version of Sophisticated Backpacks (Fabric port), GPL-3.0. Notice of mo
 - Fix the refill upgrade deleting the item in the off hand when a mod such as Better Combat changes how the off hand is read. The upgrade now reads the off hand slot of the inventory. Backport of Forge commit c6bd200a.
 - Fix the advanced jukebox upgrade losing the disc when it is crafted from the jukebox upgrade. The recipe now uses the next tier recipe type, like the other upgrades. Backport of Forge commit 2f0cf03a. The Core part of that commit is not ported.
 - Fix crashes in the upgrade cache. The inventory handler and the upgrade handler are now set through local variables, and the Inception upgrade cache uses concurrent maps. Backport of Forge commits 8928d8b8 and aaa2bf75.
+- Fix a leak of event listeners. Each placed backpack block added two global listeners that were never removed. They are now registered once. The chunk unload listener also marks only the block entities of the chunk that unloads, not all backpack block entities. This is a new fix, not from upstream.
 
 ## 1.20.1-3.23.4.5+sp.3 (2026-11-22) - sp fork
 
