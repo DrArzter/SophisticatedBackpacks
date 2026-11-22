@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.20.1-3.23.4.5+sp.2 (2026-11-22) - sp fork
+## 1.20.1-3.23.4.5+sp.3 (2026-11-22) - sp fork
 
-The same code as sp.1, published again as an immutable release. No functional change.
+The same code as sp.1, published as an immutable release. No functional change.
+The sp.2 tag never built (the Gradle wrapper lost its execute bit), so it has no release.
 
 ## 1.20.1-3.23.4.5+sp.1 (2026-11-22) - sp fork
 
