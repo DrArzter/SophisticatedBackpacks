@@ -98,7 +98,7 @@ public class BackpackBlockEntity extends BlockEntity implements IControllableSto
 			WorldHelper.notifyBlockUpdate(this);
 		});
 		backpackWrapper.setInventorySlotChangeHandler(this::setChanged);
-		backpackWrapper.setUpgradeCachesInvalidatedHandler(this::invalidateBackpackCaps);
+		backpackWrapper.setUpgradeCachesInvalidatedHandler(this::onUpgradeCachesInvalidated);
 	}
 
 	@Override
@@ -192,6 +192,14 @@ public class BackpackBlockEntity extends BlockEntity implements IControllableSto
 
 	public void invalidateCaps() {
 		invalidateBackpackCaps();
+	}
+
+	private void onUpgradeCachesInvalidated() {
+		invalidateBackpackCaps();
+		// The refresh drops the input and output handler. Without new listeners the controller stops seeing stack changes.
+		if (level != null && !level.isClientSide() && getControllerPos().isPresent()) {
+			registerInventoryStackListeners();
+		}
 	}
 
 	private void invalidateBackpackCaps() {

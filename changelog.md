@@ -14,6 +14,7 @@ Modified version of Sophisticated Backpacks (Fabric port), GPL-3.0. Notice of mo
 - Fix the advanced jukebox upgrade losing the disc when it is crafted from the jukebox upgrade. The recipe now uses the next tier recipe type, like the other upgrades. Backport of Forge commit 2f0cf03a. The Core part of that commit is not ported.
 - Fix crashes in the upgrade cache. The inventory handler and the upgrade handler are now set through local variables, and the Inception upgrade cache uses concurrent maps. Backport of Forge commits 8928d8b8 and aaa2bf75.
 - Fix a leak of event listeners. Each placed backpack block added two global listeners that were never removed. They are now registered once. The chunk unload listener also marks only the block entities of the chunk that unloads, not all backpack block entities. This is a new fix, not from upstream.
+- Fix a placed backpack next to a controller that stopped reporting stack changes to the controller after an upgrade change, which could lose items. The block now registers the stack listeners again when the upgrade caches refresh. Adapted from Forge commit 5f85eb9b, without the Core hook that Forge uses.
 
 ## 1.20.1-3.23.4.5+sp.3 (2026-11-22) - sp fork
 
