@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.20.1-3.23.4.5+sp.2 (2026-11-22) - sp fork
+
+The same code as sp.1, published again as an immutable release. No functional change.
+
 ## 1.20.1-3.23.4.5+sp.1 (2026-11-22) - sp fork
 
 This is a modified version of Sophisticated Backpacks (Fabric port), released under GPL-3.0.
