@@ -8,6 +8,7 @@ import net.p3pp3rf1y.sophisticatedbackpacks.common.BackpackWrapperLookup;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -35,6 +36,17 @@ public class SubBackpacksHandler {
 
 	public Collection<IStorageWrapper> getSubBackpacks() {
 		return subBackpacks.values();
+	}
+
+	/**
+	 * Opening the inner handler can add a contents UUID to the inner stack in place.
+	 * The parent keeps its own copy of the slot NBT, so it must refresh that copy to save the UUID.
+	 * It saves only when the slot NBT changed. A copy of the slots is used because listeners can refresh the map.
+	 */
+	void saveSubBackpackStacks() {
+		for (int slot : new ArrayList<>(subBackpacks.keySet())) {
+			inventoryHandler.onContentsChanged(slot);
+		}
 	}
 
 	private void onContentsChanged(int slot) {

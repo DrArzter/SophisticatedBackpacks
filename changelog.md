@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased - sp fork
+
+Modified version of Sophisticated Backpacks (Fabric port), GPL-3.0. Notice of modification under GPL-3.0 section 5(a).
+
+### Fixes
+- Fix a backpack inside an Inception backpack losing its contents on death, relog or restart when it was never opened outside first. The parent now saves the new contents id of the inner backpack (upstream #167, #186). The idea is from Forge commit 78e3f547, written again for this code base.
+
 ## 1.20.1-3.23.4.5+sp.3 (2026-11-22) - sp fork
 
 The same code as sp.1, published as an immutable release. No functional change.

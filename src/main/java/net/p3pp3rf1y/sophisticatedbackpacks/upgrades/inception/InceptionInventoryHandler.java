@@ -52,6 +52,7 @@ public class InceptionInventoryHandler implements ITrackedContentsItemHandler {
 			index += handlers.get(i).getSlotCount();
 			baseIndex[i] = index;
 		}
+		subBackpacksHandler.saveSubBackpackStacks();
 	}
 
 	@Override
