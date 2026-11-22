@@ -7,7 +7,6 @@ import net.minecraft.world.item.ItemStack;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.wrapper.IBackpackWrapper;
 import net.p3pp3rf1y.sophisticatedbackpacks.common.BackpackWrapperLookup;
 import net.p3pp3rf1y.sophisticatedbackpacks.util.PlayerInventoryProvider;
-import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 
 import java.util.UUID;
 
@@ -20,18 +19,18 @@ public class UUIDDeduplicator {
 	private UUIDDeduplicator() {}
 
 	public static void checkForDuplicateBackpacksAndRemoveTheirUUID(Player player, UUID backpackUuid, ItemStack backpack) {
-		PlayerInventoryProvider.get().runOnBackpacks(player, (otherBackpack, inventoryHandlerName, identifier, slot) -> {
-			if (otherBackpack != backpack) {
-				BackpackWrapperLookup.get(otherBackpack)
-						.ifPresent(wrapper -> wrapper.getContentsUuid().ifPresent(uuid -> {
-							if (uuid.equals(backpackUuid)) {
-								wrapper.removeContentsUUIDTag();
-								wrapper.onContentsNbtUpdated();
-							}
-						}));
-			}
-			return false;
-		});
+		BackpackWrapperLookup.get(backpack).ifPresent(backpackWrapper ->
+				PlayerInventoryProvider.get().runOnBackpacks(player, (otherBackpack, inventoryHandlerName, identifier, slot) -> {
+					if (otherBackpack != backpack) {
+						BackpackWrapperLookup.get(otherBackpack)
+								.ifPresent(wrapper -> wrapper.getContentsUuid().ifPresent(uuid -> {
+									if (uuid.equals(backpackUuid)) {
+										dedupeBackpackWrappers(backpackWrapper, wrapper);
+									}
+								}));
+					}
+					return false;
+				}));
 	}
 
 	public static void dedupeBackpackItemEntityInArea(ItemEntity newBackpackItemEntity) {
@@ -43,20 +42,52 @@ public class UUIDDeduplicator {
 
 	private static void dedupeBackpackItemEntityInArea(IBackpackWrapper newBackpackWrapper, ItemEntity newBackpackItemEntity, UUID backpackId) {
 		for (ItemEntity entity : newBackpackItemEntity.level().getEntitiesOfClass(ItemEntity.class, newBackpackItemEntity.getBoundingBox().inflate(10), Entity::isAlive)) {
-			if (checkEntityBackpackIdMatchAndRemoveIfItDoes(newBackpackWrapper, backpackId, entity)) {
+			// The new entity can be in the result. It must not be compared with itself.
+			if (entity != newBackpackItemEntity) {
+				checkEntityBackpackIdMatchAndRemoveIfItDoes(newBackpackWrapper, backpackId, entity);
+			}
+			// Without a UUID the new stack has no contents to protect. Stop before the size check creates a new UUID.
+			if (newBackpackWrapper.getContentsUuid().isEmpty()) {
 				break;
 			}
 		}
 	}
 
-	private static boolean checkEntityBackpackIdMatchAndRemoveIfItDoes(IBackpackWrapper newBackpackWrapper, UUID newBackpackId, ItemEntity entity) {
-		return BackpackWrapperLookup.get(entity.getItem()).flatMap(IStorageWrapper::getContentsUuid).map(backpackId -> {
-			if (backpackId.equals(newBackpackId)) {
-				newBackpackWrapper.removeContentsUUIDTag();
-				newBackpackWrapper.onContentsNbtUpdated();
-				return true;
-			}
-			return false;
-		}).orElse(false);
+	private static void checkEntityBackpackIdMatchAndRemoveIfItDoes(IBackpackWrapper newBackpackWrapper, UUID newBackpackId, ItemEntity entity) {
+		BackpackWrapperLookup.get(entity.getItem()).ifPresent(wrapper ->
+				wrapper.getContentsUuid().ifPresent(backpackId -> {
+					if (backpackId.equals(newBackpackId)) {
+						dedupeBackpackWrappers(newBackpackWrapper, wrapper);
+					}
+				}));
+	}
+
+	/**
+	 * Two backpacks share one contents UUID. The one with more inventory slots keeps it, because it is the one that was upgraded.
+	 * On a tie the first one keeps it. The other one loses only its UUID tag. Its stored contents are not deleted.
+	 *
+	 * @return the wrapper that kept the UUID
+	 */
+	public static IBackpackWrapper dedupeBackpackWrappers(IBackpackWrapper firstBackpackWrapper, IBackpackWrapper secondBackpackWrapper) {
+		if (isFirstBackpackPreferred(firstBackpackWrapper, secondBackpackWrapper)) {
+			removeUuid(secondBackpackWrapper);
+			return firstBackpackWrapper;
+		}
+
+		removeUuid(firstBackpackWrapper);
+		return secondBackpackWrapper;
+	}
+
+	public static boolean isFirstBackpackPreferred(IBackpackWrapper firstBackpackWrapper, IBackpackWrapper secondBackpackWrapper) {
+		return getInventorySize(firstBackpackWrapper) >= getInventorySize(secondBackpackWrapper);
+	}
+
+	private static int getInventorySize(IBackpackWrapper backpackWrapper) {
+		return backpackWrapper.getInventoryHandler().getSlotCount();
+	}
+
+	private static void removeUuid(IBackpackWrapper backpackWrapper) {
+		backpackWrapper.removeContentsUUIDTag();
+		backpackWrapper.onContentsNbtUpdated();
 	}
 }

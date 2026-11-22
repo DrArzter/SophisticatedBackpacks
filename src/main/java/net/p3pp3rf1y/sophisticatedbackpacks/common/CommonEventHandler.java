@@ -41,6 +41,7 @@ import net.p3pp3rf1y.sophisticatedbackpacks.api.IBlockClickResponseUpgrade;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackItem;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackBlock;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackBlockEntity;
+import net.p3pp3rf1y.sophisticatedbackpacks.backpack.UUIDDeduplicator;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.wrapper.IBackpackWrapper;
 import net.p3pp3rf1y.sophisticatedbackpacks.client.gui.SBPTranslationHelper;
 import net.p3pp3rf1y.sophisticatedbackpacks.init.ModBlocks;
@@ -136,7 +137,7 @@ public class CommonEventHandler {
 		}
 		nextBackpackCheckTime.put(dimensionKey, level.getGameTime() + BACKPACK_CHECK_COOLDOWN);
 
-		Set<UUID> backpackIds = new HashSet<>();
+		Map<UUID, IBackpackWrapper> backpackIds = new HashMap<>();
 
 		level.players().forEach(player -> {
 			AtomicInteger numberOfBackpacks = new AtomicInteger(0);
@@ -160,14 +161,16 @@ public class CommonEventHandler {
 		});
 	}
 
-	private static void addBackpackIdIfUniqueOrDedupe(Set<UUID> backpackIds, IBackpackWrapper backpackWrapper) {
+	private static void addBackpackIdIfUniqueOrDedupe(Map<UUID, IBackpackWrapper> backpackIds, IBackpackWrapper backpackWrapper) {
 		backpackWrapper.getContentsUuid().ifPresent(backpackId -> {
-			if (backpackIds.contains(backpackId)) {
-				backpackWrapper.removeContentsUUIDTag();
-				backpackWrapper.onContentsNbtUpdated();
-			} else {
-				backpackIds.add(backpackId);
+			IBackpackWrapper existingBackpackWrapper = backpackIds.get(backpackId);
+			// The same stack can be visited twice, for example when two handlers expose it. It is not a duplicate of itself.
+			if (existingBackpackWrapper == null || existingBackpackWrapper.getBackpack() == backpackWrapper.getBackpack()) {
+				backpackIds.put(backpackId, backpackWrapper);
+				return;
 			}
+
+			backpackIds.put(backpackId, UUIDDeduplicator.dedupeBackpackWrappers(existingBackpackWrapper, backpackWrapper));
 		});
 	}
 

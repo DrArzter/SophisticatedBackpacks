@@ -6,6 +6,7 @@ Modified version of Sophisticated Backpacks (Fabric port), GPL-3.0. Notice of mo
 
 ### Fixes
 - Fix a backpack inside an Inception backpack losing its contents on death, relog or restart when it was never opened outside first. The parent now saves the new contents id of the inner backpack (upstream #167, #186). The idea is from Forge commit 78e3f547, written again for this code base.
+- Fix the backpack duplicate check removing the contents id from the wrong copy, so that a full backpack looked empty. Of two backpacks with the same contents id, the one with more inventory slots now keeps it. A stack is no longer compared with itself, in the tick check and in the dropped item check (upstream #187, #119). Backport of Forge commit 3667ac84. The removed copy opens empty. The shared contents stay with the kept copy and are not deleted.
 
 ## 1.20.1-3.23.4.5+sp.3 (2026-11-22) - sp fork
 
