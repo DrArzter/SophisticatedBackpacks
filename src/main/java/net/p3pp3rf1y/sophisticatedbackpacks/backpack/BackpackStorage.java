@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -94,6 +95,10 @@ public class BackpackStorage extends SavedData {
 			setDirty();
 			return new CompoundTag();
 		});
+	}
+
+	public Optional<CompoundTag> getBackpackContents(UUID backpackUuid) {
+		return Optional.ofNullable(backpackContents.get(backpackUuid));
 	}
 
 	public void putAccessLog(AccessLogRecord alr) {
