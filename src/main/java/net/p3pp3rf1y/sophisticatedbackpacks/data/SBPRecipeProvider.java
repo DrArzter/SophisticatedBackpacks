@@ -475,7 +475,7 @@ public class SBPRecipeProvider extends FabricRecipeProvider {
 				.unlockedBy(HAS_UPGRADE_BASE, has(ModItems.UPGRADE_BASE))
 				.save(consumer);
 
-		ShapeBasedRecipeBuilder.shaped(ModItems.ADVANCED_JUKEBOX_UPGRADE)
+		ShapeBasedRecipeBuilder.shaped(ModItems.ADVANCED_JUKEBOX_UPGRADE, ModRecipes.UPGRADE_NEXT_TIER_SERIALIZER)
 				.pattern(" D ")
 				.pattern("GJG")
 				.pattern("RRR")
