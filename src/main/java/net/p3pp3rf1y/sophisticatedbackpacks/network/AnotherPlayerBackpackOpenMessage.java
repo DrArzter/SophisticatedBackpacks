@@ -18,6 +18,7 @@ import net.p3pp3rf1y.sophisticatedcore.settings.main.MainSettingsCategory;
 import net.p3pp3rf1y.sophisticatedcore.util.MenuProviderHelper;
 
 public class AnotherPlayerBackpackOpenMessage extends SimplePacketBase {
+	private static final int MAX_OPEN_DISTANCE = 8;
 	private final int anotherPlayerId;
 
 	public AnotherPlayerBackpackOpenMessage(int anotherPlayerId) {
@@ -39,7 +40,8 @@ public class AnotherPlayerBackpackOpenMessage extends SimplePacketBase {
 				return;
 			}
 
-			if (player.level().getEntity(anotherPlayerId) instanceof Player anotherPlayer) {
+			// Same limit as BackpackContext.AnotherPlayer.canInteractWith, so the menu does not close at once.
+			if (player.level().getEntity(anotherPlayerId) instanceof Player anotherPlayer && anotherPlayer.isAlive() && player.distanceTo(anotherPlayer) < MAX_OPEN_DISTANCE) {
 				PlayerInventoryProvider.get().runOnBackpacks(anotherPlayer, (backpack, inventoryName, identifier, slot) -> {
 					if (canAnotherPlayerOpenBackpack(anotherPlayer, backpack)) {
 

@@ -425,7 +425,7 @@ public abstract class BackpackContext implements MenuProviderHelper.ContextProvi
 
 		@Override
 		public boolean canInteractWith(Player player) {
-			return player.distanceTo(otherPlayer) < 8;
+			return otherPlayer.isAlive() && player.distanceTo(otherPlayer) < 8;
 		}
 
 		@Override
