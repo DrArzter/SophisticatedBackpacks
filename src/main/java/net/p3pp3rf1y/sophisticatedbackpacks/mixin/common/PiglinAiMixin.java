@@ -35,6 +35,7 @@ public class PiglinAiMixin {
 		if (entity instanceof Player player) {
 			List<ItemStack> trinkets = Lists.newArrayList();
 			PlayerInventoryProvider.get().runOnBackpacks(player, CompatModIds.TRINKETS, (backpack, inventoryHandlerName, identifier, slot) -> trinkets.add(backpack));
+			PlayerInventoryProvider.get().runOnBackpacks(player, CompatModIds.ACCESSORIES, (backpack, inventoryHandlerName, identifier, slot) -> trinkets.add(backpack));
 			return Iterables.concat(entity.getArmorSlots(), trinkets);
 		}
 

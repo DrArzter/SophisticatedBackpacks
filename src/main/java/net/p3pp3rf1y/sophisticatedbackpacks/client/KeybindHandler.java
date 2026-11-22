@@ -28,6 +28,7 @@ import net.p3pp3rf1y.sophisticatedbackpacks.client.gui.BackpackScreen;
 import net.p3pp3rf1y.sophisticatedbackpacks.client.gui.SBPTranslationHelper;
 import net.p3pp3rf1y.sophisticatedbackpacks.common.gui.BackpackContainer;
 import net.p3pp3rf1y.sophisticatedbackpacks.compat.CompatModIds;
+import net.p3pp3rf1y.sophisticatedbackpacks.compat.accessories.AccessoriesCompat;
 import net.p3pp3rf1y.sophisticatedbackpacks.compat.trinkets.TrinketsCompat;
 import net.p3pp3rf1y.sophisticatedbackpacks.network.BackpackOpenMessage;
 import net.p3pp3rf1y.sophisticatedbackpacks.network.BlockToolSwapMessage;
@@ -194,7 +195,7 @@ public class KeybindHandler {
 		Screen screen = Minecraft.getInstance().screen;
 		if (screen instanceof AbstractContainerScreen<?> containerScreen) {
 			Slot slot = ((AbstractContainerScreenAccessor) containerScreen).getHoveredSlot();
-			if (slot != null && (slot.container instanceof Inventory || isTrinket(slot.container))) {
+			if (slot != null && (slot.container instanceof Inventory || isTrinket(slot.container) || isAccessories(slot))) {
 				Optional<PlayerInventoryReturn> ret = getPlayerInventory(slot);
 
 				if (ret.isPresent() && slot.getItem().getItem() instanceof BackpackItem) {
@@ -211,13 +212,20 @@ public class KeybindHandler {
 	}
 
 	private static boolean isTrinket(Container container) {
-		return FabricLoader.getInstance().isModLoaded(CompatModIds.TRINKETS) && TrinketsCompat.isTrinketContainer(container);
+		return CompatModIds.isRealTrinketsLoaded() && TrinketsCompat.isTrinketContainer(container);
+	}
+
+	private static boolean isAccessories(Slot slot) {
+		return FabricLoader.getInstance().isModLoaded(CompatModIds.ACCESSORIES) && AccessoriesCompat.isAccessoriesContainer(slot);
 	}
 
 	record PlayerInventoryReturn(String identifier, String handlerName) {}
 
 	private static Optional<PlayerInventoryReturn> getPlayerInventory(Slot slot) {
 		int slotIndex = slot.getContainerSlot();
+		if (isAccessories(slot)) {
+			return AccessoriesCompat.getSlotName(slot).map(name -> new PlayerInventoryReturn(name, CompatModIds.ACCESSORIES));
+		}
 		if (slotIndex == CHEST_SLOT_INDEX) {
 			return Optional.of(new PlayerInventoryReturn("", PlayerInventoryProvider.ARMOR_INVENTORY));
 		} else if (slotIndex == OFFHAND_SLOT_INDEX) {

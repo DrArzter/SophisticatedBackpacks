@@ -12,10 +12,7 @@ buildscript {
 
 plugins {
     id 'idea'
-    id 'fabric-loom' version '1.10.+'
-    id 'maven-publish'
-    id "net.darkhax.curseforgegradle" version "1.1.15"
-    id "com.modrinth.minotaur" version "2.+"
+    id 'fabric-loom' version '1.10.5'
 }
 
 apply from: getProject().file('gradle/package-info.gradle')
@@ -69,21 +66,10 @@ repositories {
     maven { url = "https://www.cursemaven.com" } // Balm, CraftingTweaks
     maven { url = "https://modmaven.dev" } // Jei
     maven { url = "https://maven.resourcefulbees.com/repository/maven-public/" } // Chipped, resourcefullib, athena
-    maven {
-        name = "GitHubPackages"
-        url = uri("https://maven.pkg.github.com/Salandora/SophisticatedCore")
-        credentials {
-            username = System.getenv("USERNAME")
-            password = System.getenv("READ_PACKAGES_TOKEN")
-        }
-        content {
-            includeGroupByRegex "sophisticatedcore.*"
-        }
-    }
 }
 
 group = mod_group_id
-version = "${project.minecraft_version}-${project.mod_version}.${getBuildNumber()}"
+version = "${project.minecraft_version}-${project.mod_version}"
 base {
     archivesName = "${mod_id}"
 }
@@ -181,7 +167,15 @@ dependencies {
             }
         }
     } else {
-        modImplementation("sophisticatedcore:sophisticatedcore:${sc_version}")
+        // Sophisticated Core (Fabric port) from Modrinth Maven: project id : version id
+        modImplementation("maven.modrinth:9jxwkYQL:${project.sc_modrinth_version_id}")
+        // The Modrinth POM has no transitive dependencies, and Loom does not expose the jars nested in Core.
+        // Core bundles them at run time. They need modImplementation so Loom applies their injected interfaces.
+        for (def module in sc_nested_port_lib_modules.split(',')) {
+            modImplementation("io.github.fabricators_of_create.Porting-Lib:${module.trim()}:$port_lib_version+$minecraft_version")
+        }
+        modImplementation("teamreborn:energy:$energy_version")
+        modImplementation("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:$forge_config_api_port_version")
     }
 
     if (port_lib_modules != "none") {
@@ -223,6 +217,8 @@ dependencies {
     modCompileOnly("maven.modrinth:modernkeybinding:${project.mkb_modrinth_mod_version}") { transitive = false }
 
     modCompileOnly("dev.emi:trinkets:$project.trinkets_version")
+    // Accessories is optional at run time, so it is never bundled.
+    modCompileOnly("maven.modrinth:jtmvUHXj:${project.accessories_modrinth_version_id}") { transitive = false }
 
     testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.+'
@@ -344,229 +340,4 @@ static def mavenVersionToFabric(String version) {
     }
     builder.append(version.substring(version.lastIndexOf(',') + 1, version.length() - 1))
     return builder.toString()
-}
-
-static def getBuildNumber() {
-    if (System.getenv("GITHUB_RUN_NUMBER") != null) {
-        return System.getenv("GITHUB_RUN_NUMBER").toString()
-    }
-    return "1"
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("${github_package_url}")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
-    publications {
-        register("mavenJava", MavenPublication) {
-            artifactId = mod_id
-            from((SoftwareComponent) components["java"])
-        }
-    }
-}
-
-
-tasks.register('generateChangelog') {
-    doLast {
-        // Function to remove characters with Unicode code points 129 or higher
-        def removeHighUnicodeChars = { text ->
-            text.codePoints()
-                    .filter { codePoint -> codePoint <= 0x007F }  // Keep only ASCII characters (U+0000 to U+007F)
-                    .collect { codePoint -> new String(Character.toChars(codePoint)) }
-                    .join('')
-        }
-
-        // Function to format commit messages with nesting
-        def formatMultilineMessage = { message ->
-            // Split message by lines, trim whitespace, and create formatted list
-            def lines = message.split('\n')
-            def formattedMessage = lines[0].trim() // First line as top-level list item
-            if (lines.size() > 1) {
-                formattedMessage += "\n" + lines[1..-1].collect { line ->
-                    // Trim the line and remove leading dash if present
-                    def trimmedLine = line.trim()
-                    if (trimmedLine.startsWith('-')) {
-                        trimmedLine = trimmedLine.substring(1).trim()
-                    }
-                    "    - ${trimmedLine}" // Nested list for additional lines
-                }.join('\n')
-            }
-            return formattedMessage
-        }
-
-        // Function to remove [DEV] section from commit message
-        def removeDevSection = { message ->
-            def devIndex = message.indexOf('[DEV]')
-            if (devIndex != -1) {
-                return message.substring(0, devIndex).trim()
-            }
-            return message
-        }
-
-        // Get the latest commit hash
-        def latestCommitHash = "git rev-parse HEAD".execute(null, project.projectDir).text.trim()
-
-        // Check if the latest commit is a merge commit
-        def parentCommits = "git rev-list --parents -n 1 ${latestCommitHash}".execute(null, project.projectDir).text.split()
-        logger.info("Parent commits: ${parentCommits}")
-
-        def commitMessages = []
-        if (parentCommits.size() > 2) { // Merge commit has more than 2 parents
-            def firstParent = parentCommits[1]
-            def secondParent = parentCommits[2]
-            def gitLogCommand = [
-                    "bash", "-c", "git log --pretty=format:%B ${firstParent}..${secondParent}"
-            ]
-            commitMessages = gitLogCommand.execute(null, project.projectDir).text.split('\n\n')  // Split by two newlines for each commit
-            logger.info("Merge commit, ran git log command: ${gitLogCommand.join(' ')} and got ${commitMessages}")
-        } else {
-            // Single commit log
-            commitMessages = "git log -1 --pretty=%B".execute(null, project.projectDir).text.split('\n\n')
-            // Split by two newlines for each commit
-            logger.info("Single commit, ran git log command: git log -1 --pretty=%B and got ${commitMessages}");
-        }
-
-        def generals = []
-        def features = []
-        def fixes = []
-        def compatibility = []
-        def mergedFeatures = []
-        def mergedFixes = []
-        def cleanup = false
-        commitMessages.each { String commitMessage ->
-            commitMessage = removeHighUnicodeChars(commitMessage) // Remove high Unicode characters
-            commitMessage = removeDevSection(commitMessage) // Remove [DEV] section
-
-            if (commitMessage.startsWith('[General]: ')) {
-                generals.add(commitMessage.replaceFirst('\\[General]: ', '').trim())
-            } else if (commitMessage.startsWith('[Feat]: ')) {
-                features.add(commitMessage.replaceFirst('\\[Feat]: ', '').trim())
-            } else if (commitMessage.startsWith('[Fix]: ')) {
-                fixes.add(commitMessage.replaceFirst('\\[Fix]: ', '').trim())
-            } else if (commitMessage.startsWith('[Compatibility]: ')) {
-                compatibility.add(commitMessage.replaceFirst('\\[Compatibility]: ', '').trim())
-            } else if (commitMessage.startsWith('[Cleanup]: ')) {
-                cleanup = true
-            } else if (commitMessage.startsWith('feat: ')) {
-                mergedFeatures.add(commitMessage.replaceFirst('feat: ', '').trim())
-            } else if (commitMessage.startsWith('fix: ')) {
-                mergedFixes.add(commitMessage.replaceFirst('fix: ', '').trim())
-            }
-        }
-
-        def changelog = new StringBuilder()
-
-        changelog.append("# Changelog\n\n")
-
-        changelog.append("### General\n")
-        changelog.append("- Update to version ${project.mod_version}\n")
-        if (cleanup) {
-            changelog.append("- Code cleanup\n")
-        }
-        if (generals) {
-            generals.each { general -> changelog.append("- ${formatMultilineMessage(general)}\n") }
-        }
-
-        if (features) {
-            changelog.append("\n")
-            changelog.append("### Features\n")
-            features.each { feature -> changelog.append("- ${formatMultilineMessage(feature)}\n") }
-        }
-
-        if (fixes) {
-            changelog.append("\n")
-            changelog.append("### Fixes\n")
-            fixes.each { fix -> changelog.append("- ${formatMultilineMessage(fix)}\n") }
-        }
-
-        if (compatibility) {
-            changelog.append("\n")
-            changelog.append("### Compatibility\n")
-            compatibility.each { comp -> changelog.append("- ${formatMultilineMessage(comp)}\n") }
-        }
-
-        if (mergedFeatures || mergedFixes) {
-            changelog.append("\n")
-            changelog.append("## Merged from upstream\n")
-
-            if (mergedFeatures) {
-                changelog.append("\n")
-                changelog.append("### Features\n")
-                mergedFeatures.each { feature -> changelog.append("- ${formatMultilineMessage(feature)}\n") }
-            }
-
-            if (mergedFixes) {
-                changelog.append("\n")
-                changelog.append("### Fixes\n")
-                mergedFixes.each { fix -> changelog.append("- ${formatMultilineMessage(fix)}\n") }
-            }
-        }
-
-        // Store the changelog in a project property or an environment variable
-        logger.info("Compiled changelog: " + changelog.toString())
-        project.ext.changelog = changelog.toString()
-    }
-    project.ext.changelog = ""
-}
-
-task curseforge(type: net.darkhax.curseforgegradle.TaskPublishCurseForge) {
-    dependsOn 'generateChangelog'
-
-    apiToken = System.getenv("CURSEFORGE_TOKEN")
-    def mainFile = upload(project.curseforge_id, file("${project.layout.buildDirectory.get()}/libs/${base.archivesName.get()}-${version}.jar"))
-    mainFile.changelogType = 'markdown'
-    mainFile.changelog = { project.ext.changelog }
-    mainFile.addModLoader('Fabric')
-    mainFile.releaseType = "${release_type}"
-
-    // Game versions
-    mainFile.addGameVersion("${release_versions}".split(','))
-
-    // Dependencies
-    mainFile.addRequirement('sophisticated-core-unofficial-fabric-port')
-    mainFile.addRequirement('fabric-api')
-    mainFile.addRequirement('forge-config-api-port-fabric')
-    mainFile.addEmbedded('porting-lib')
-    mainFile.addOptional('jei')
-    mainFile.addOptional('emi')
-    mainFile.addOptional('roughly-enough-items')
-    mainFile.addOptional('trinkets')
-    mainFile.addOptional('modern-keybinding-fabric')
-    mainFile.addOptional('crafting-tweaks-fabric')
-    onlyIf { !project.ext.changelog.isEmpty() }
-}
-
-modrinth {
-    token = System.getenv("MODRINTH_TOKEN")
-    projectId = "${modrinth_project_id}"
-    versionType = "${release_type}"
-    uploadFile = remapJar
-    gameVersions = "${release_versions}".split(',').collect {e -> e}
-    loaders = ["fabric"]
-    dependencies {
-        required.project "sophisticated-core-(unofficial-fabric-port)"
-        required.project "fabric-api"
-        required.project "forge-config-api-port"
-        embedded.project "porting_lib"
-        optional.project "jei"
-        optional.project "emi"
-        optional.project "rei"
-        optional.project "trinkets"
-        optional.project "crafting-tweaks"
-        optional.project "modernkeybinding"
-    }
-    changelog = provider {
-        project.ext.changelog
-    }
-}
-tasks.modrinth {
-    dependsOn(tasks.generateChangelog)
-    onlyIf { !project.ext.changelog.isEmpty() }
 }
