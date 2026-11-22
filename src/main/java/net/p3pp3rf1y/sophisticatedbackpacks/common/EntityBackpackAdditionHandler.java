@@ -56,6 +56,7 @@ public class EntityBackpackAdditionHandler {
 
 	private static final String SPAWNED_WITH_BACKPACK = "spawnedWithBackpack";
 	private static final String SPAWNED_WITH_JUKEBOX_UPGRADE = SophisticatedBackpacks.MOD_ID + ":jukebox";
+	private static final String PENDING_BACKPACK_ADDITION = SophisticatedBackpacks.MOD_ID + ":pendingBackpack";
 
 	private static final List<WeightedElement<Item>> HELMET_CHANCES = List.of(
 			new WeightedElement<>(1, Items.NETHERITE_HELMET),
@@ -109,13 +110,33 @@ public class EntityBackpackAdditionHandler {
 			2, BACKPACK_CHANCES.subList(2, 5)
 	);
 
-	static void addBackpack(Monster monster, LevelAccessor level, DifficultyInstance difficultyInstance) {
+	static void handleBackpackAdditionOnSpawn(Monster monster, LevelAccessor level, DifficultyInstance difficultyInstance) {
 		RandomSource rnd = level.getRandom();
-		if (!Config.SERVER.entityBackpackAdditions.canWearBackpack(monster.getType())
-				|| rnd.nextInt((int) (1 / Config.SERVER.entityBackpackAdditions.chance.get())) != 0 || (monster instanceof Raider raider && raider.getCurrentRaid() != null)) {
+		if (!shouldAddBackpack(monster, rnd)) {
 			return;
 		}
 
+		if (shouldDeferBackpackAddition(level)) {
+			// Off the server thread the backpack contents would go to the client copy of the storage and be lost.
+			monster.addTag(PENDING_BACKPACK_ADDITION);
+			return;
+		}
+
+		addBackpack(monster, level, difficultyInstance, rnd);
+	}
+
+	private static boolean shouldAddBackpack(Monster monster, RandomSource rnd) {
+		return Config.SERVER.entityBackpackAdditions.canWearBackpack(monster.getType())
+				&& rnd.nextInt((int) (1 / Config.SERVER.entityBackpackAdditions.chance.get())) == 0
+				&& (!(monster instanceof Raider raider) || raider.getCurrentRaid() == null);
+	}
+
+	private static boolean shouldDeferBackpackAddition(LevelAccessor level) {
+		MinecraftServer server = level.getServer();
+		return server == null || !server.isSameThread();
+	}
+
+	private static void addBackpack(Monster monster, LevelAccessor level, DifficultyInstance difficultyInstance, RandomSource rnd) {
 		//noinspection UnstableApiUsage
 		int index = Ints.constrainToRange((int) Math.floor(DIFFICULTY_BACKPACK_CHANCES.size() / MAX_LOCAL_DIFFICULTY * difficultyInstance.getEffectiveDifficulty() - 0.1f), 0, DIFFICULTY_BACKPACK_CHANCES.size());
 
@@ -321,6 +342,13 @@ public class EntityBackpackAdditionHandler {
 	}
 
 	public static void onLivingUpdate(LivingEntity entity) {
+		if (entity instanceof Monster monster && !monster.level().isClientSide() && monster.getTags().contains(PENDING_BACKPACK_ADDITION)) {
+			monster.removeTag(PENDING_BACKPACK_ADDITION);
+			if (monster.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) {
+				Level level = monster.level();
+				addBackpack(monster, level, level.getCurrentDifficultyAt(monster.blockPosition()), level.getRandom());
+			}
+		}
 		if (!entity.getTags().contains(SPAWNED_WITH_JUKEBOX_UPGRADE)) {
 			return;
 		}

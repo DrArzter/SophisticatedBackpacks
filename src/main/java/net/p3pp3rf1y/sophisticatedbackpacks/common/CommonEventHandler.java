@@ -229,7 +229,7 @@ public class CommonEventHandler {
 	private void onLivingSpecialSpawn(MobSpawnEvents.FinalizeSpawn event) {
 		Entity entity = event.getEntity();
 		if (entity instanceof Monster monster && monster.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) {
-			EntityBackpackAdditionHandler.addBackpack(monster, event.getLevel(), event.getDifficulty());
+			EntityBackpackAdditionHandler.handleBackpackAdditionOnSpawn(monster, event.getLevel(), event.getDifficulty());
 		}
 	}
 
